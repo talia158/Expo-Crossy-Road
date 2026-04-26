@@ -28,3 +28,14 @@ expo-env.d.ts
 
 /ios
 /android
+
+# ML / YOLO
+.venv/
+runs/
+*.pt
+
+# Generated dataset directories (raw + rotated + scratch)
+/dataset/
+/dataset_final/
+/dataset_rotated/
+/dataset_test/

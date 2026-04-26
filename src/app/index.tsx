@@ -13,6 +13,7 @@ import {
 import GestureRecognizer, { swipeDirections } from "@/components/GestureView";
 import Score from "@/components/ScoreText";
 import Engine from "@/GameEngine";
+import DatasetController from "@/DatasetController";
 import State from "@/state";
 import CharacterSelectScreen from "@/screens/CharacterSelectScreen";
 import GameOverScreen from "@/screens/GameOverScreen";
@@ -138,7 +139,14 @@ class Game extends Component {
     this.engine._isGameStateEnded = () => {
       return this.state.gameState !== State.Game.playing;
     };
-    this.engine.onGameReady = () => this.setState({ ready: true });
+    this.engine.onGameReady = () => {
+      this.setState({ ready: true });
+      if (typeof window !== "undefined") {
+        const controller = new DatasetController(this.engine);
+        (window as any).__crossyDataset = controller;
+        (window as any).__crossyEngine = this.engine;
+      }
+    };
     this.engine.onGameEnded = () => {
       this.setState({ gameState: State.Game.gameOver });
       // this.props.navigation.navigate('GameOver')
@@ -160,16 +168,20 @@ class Game extends Component {
     if (!this.state.ready) return;
 
     return (
-      <GestureView
-        pointerEvents={DEBUG_CAMERA_CONTROLS ? "none" : undefined}
-        onStartGesture={this.engine.beginMoveWithDirection}
-        onSwipe={this.onSwipe}
-      >
-        <GLView
-          style={{ flex: 1, height: "100%", overflow: "hidden" }}
-          onContextCreate={this.engine._onGLContextCreate}
-        />
-      </GestureView>
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+        <GestureView
+          pointerEvents={DEBUG_CAMERA_CONTROLS ? "none" : undefined}
+          onStartGesture={this.engine.beginMoveWithDirection}
+          onSwipe={this.onSwipe}
+          style={{ alignItems: "center", justifyContent: "center" }}
+        >
+          <GLView
+            style={{ width: 240, height: 480, overflow: "hidden" }}
+            onContextCreate={this.engine._onGLContextCreate}
+          />
+        </GestureView>
+        <FootprintCanvas engine={this.engine} />
+      </View>
     );
   };
 
@@ -307,6 +319,45 @@ const GestureView = ({ onStartGesture, onSwipe, ...props }) => {
       {...props}
     />
   );
+};
+
+const FootprintCanvas = ({ engine }: { engine: Engine }) => {
+  const ref = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    let rafId: number;
+    const draw = () => {
+      const canvas = ref.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, 240, 480);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, 240, 480);
+        const angle = 14.5 * Math.PI / 180;
+        const cosA = Math.cos(angle), sinA = Math.sin(angle);
+        ctx.strokeStyle = "#00ff00";
+        ctx.lineWidth = 1;
+        for (const { x1, x2, y } of engine.getMovingObjectFootprints()) {
+          const mx = (x1 + x2) / 2;
+          const hw = (x2 - x1) / 2;
+          ctx.beginPath();
+          ctx.moveTo(mx - hw * cosA, y - hw * sinA);
+          ctx.lineTo(mx + hw * cosA, y + hw * sinA);
+          ctx.stroke();
+        }
+      }
+      rafId = requestAnimationFrame(draw);
+    };
+    rafId = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafId);
+  }, [engine]);
+
+  return React.createElement("canvas", {
+    ref,
+    width: 240,
+    height: 480,
+    style: { width: 240, height: 480, display: "block" },
+  });
 };
 
 function GameScreen(props) {

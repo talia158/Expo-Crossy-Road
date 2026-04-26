@@ -1,4 +1,5 @@
 import { Dimensions } from "react-native";
+import { Box3, Vector3 } from "three";
 
 import { swipeDirections } from "@/components/GestureView";
 import AudioManager from "./AudioManager";
@@ -25,7 +26,9 @@ const normalizeAngle = (angle) => {
 
 export default class Engine {
   updateScale = () => {
-    const { width, height, scale } = Dimensions.get("window");
+    const width = 240;
+    const height = 480;
+    const scale = 1;
     if (this.camera) {
       this.camera.updateScale({ width, height, scale });
     }
@@ -363,6 +366,54 @@ export default class Engine {
       return;
     }
     this._hero.runPosieAnimation();
+  };
+
+  getMovingObjectFootprints = (): Array<{ x1: number; x2: number; y: number; type: string }> => {
+    if (!this.camera || !this.gameMap) return [];
+    this.camera.updateMatrixWorld();
+
+    const box = new Box3();
+    const v = new Vector3();
+    const W = 240, H = 480;
+
+    const project = (wx: number, wy: number, wz: number) => {
+      v.set(wx, wy, wz).project(this.camera);
+      return { sx: (v.x + 1) / 2 * W, sy: (-v.y + 1) / 2 * H };
+    };
+
+    const footprint = (mesh: any, type: string) => {
+      box.setFromObject(mesh);
+      const { min: mn, max: mx } = box;
+      const pts = [
+        project(mn.x, mn.y, mn.z), project(mx.x, mn.y, mn.z),
+        project(mn.x, mx.y, mn.z), project(mx.x, mx.y, mn.z),
+        project(mn.x, mn.y, mx.z), project(mx.x, mn.y, mx.z),
+        project(mn.x, mx.y, mx.z), project(mx.x, mx.y, mx.z),
+      ];
+      let x1 = Infinity, x2 = -Infinity, y = -Infinity;
+      for (const p of pts) {
+        if (p.sx < x1) x1 = p.sx;
+        if (p.sx > x2) x2 = p.sx;
+        if (p.sy > y)  y  = p.sy;
+      }
+      return { x1, x2, y, type };
+    };
+
+    const results: Array<{ x1: number; x2: number; y: number; type: string }> = [];
+    for (const row of Object.values(this.gameMap.floorMap) as any[]) {
+      const { type, entity } = row;
+      if (type === "road" && entity.active) {
+        for (const car of entity.cars)
+          results.push(footprint(car.mesh, "car"));
+      } else if (type === "railRoad" && entity.active && entity.train?.mesh) {
+        results.push(footprint(entity.train.mesh, "train"));
+      } else if (type === "water" && entity.active) {
+        for (const ent of entity.entities)
+          if (ent.speed) // exclude lily pads (speed === 0)
+            results.push(footprint(ent.mesh, "log"));
+      }
+    }
+    return results;
   };
 
   _onGLContextCreate = async (gl) => {

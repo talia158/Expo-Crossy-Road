@@ -20,7 +20,7 @@ import { Fill } from "./Row/Grass";
 
 // TODO Add to state - disable/enable when battery is low
 const useParticles = true;
-const useShadows = true;
+const useShadows = false;
 
 export class CrossyScene extends Scene {
   world: CrossyWorld;
@@ -34,7 +34,7 @@ export class CrossyScene extends Scene {
     this.worldWithCamera.add(this.world);
     this.add(this.worldWithCamera);
 
-    const light = new DirectionalLight(0xffffff, 1.0);
+    const light = new DirectionalLight(0xffffff, 1.5);
     light.position.set(20, 30, 0.05);
     light.castShadow = useShadows;
     light.shadow.mapSize.width = 1024 * 2;
@@ -116,7 +116,7 @@ export class CrossyScene extends Scene {
 export class CrossyCamera extends OrthographicCamera {
   constructor() {
     super(-1, 1, 1, -1, -30, 30);
-    this.position.set(-1, 2.8, -2.9); // Change -1 to -.02
+    this.position.set(-1.006, 3.409, -2.9);
     this.lookAt(0, 0, 0);
   }
 
@@ -125,7 +125,7 @@ export class CrossyCamera extends OrthographicCamera {
     this.right = width * scale;
     this.top = height * scale;
     this.bottom = -(height * scale);
-    this.zoom = 400;
+    this.zoom = 61.3;
     this.updateProjectionMatrix();
   };
 }
@@ -134,7 +134,7 @@ export class CrossyWorld extends Group {
   constructor() {
     super();
 
-    this.add(new AmbientLight(0xffffff, 1.8));
+    this.add(new AmbientLight(0xffffff, 2.0));
   }
 
   createParticles = () => {
@@ -152,8 +152,7 @@ export class CrossyRenderer extends Renderer {
     this.__gl = props.gl;
     this.setShadowsEnabled(useShadows);
 
-    // Set proper color space for vibrant colors
-    this.outputColorSpace = THREE.SRGBColorSpace;
+    this.outputColorSpace = THREE.LinearSRGBColorSpace;
   }
 
   setShadowsEnabled(enabled) {

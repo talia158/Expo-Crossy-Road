@@ -1,8 +1,8 @@
 import { Asset } from "expo-asset";
 import {
+  LinearSRGBColorSpace,
   MeshLambertMaterial,
   NearestFilter,
-  SRGBColorSpace,
   Texture,
   TextureLoader,
 } from "three";
@@ -24,7 +24,7 @@ async function loadTextureAsync(resource: Asset): Promise<Texture> {
 
     texture.magFilter = NearestFilter;
     texture.minFilter = NearestFilter;
-    texture.colorSpace = SRGBColorSpace;
+    texture.colorSpace = LinearSRGBColorSpace;
 
     textureCache[cacheKey] = texture;
     return texture;
